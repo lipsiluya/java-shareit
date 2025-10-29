@@ -24,6 +24,7 @@ public class WebConfig implements WebMvcConfigurer {
         return new ObjectMapper();
     }
 
+    //внесу комментарий сюда, тк забыл раньше создать ветку, простите((
     // Добавляем фильтр для поддержки PATCH методов
     @Bean
     public jakarta.servlet.Filter hiddenHttpMethodFilter() {
