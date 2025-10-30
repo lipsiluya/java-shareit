@@ -6,8 +6,13 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 public class HealthController {
 
-    @GetMapping("/health")  // ← изменить путь
-    public String test() {
+    @GetMapping("/")  // ← добавить корневой путь
+    public String root() {
+        return "ShareIt Application is running";
+    }
+
+    @GetMapping("/health")
+    public String health() {
         return "OK";
     }
 }
