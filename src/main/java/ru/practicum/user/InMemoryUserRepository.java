@@ -1,4 +1,4 @@
-package ru.practicum.user;
+/*package ru.practicum.user;
 
 import org.springframework.stereotype.Repository;
 import java.util.*;
@@ -39,4 +39,4 @@ public class InMemoryUserRepository implements UserRepository {
     public void delete(Long id) {
         storage.remove(id);
     }
-}
+}*/

@@ -1,4 +1,4 @@
-package ru.practicum.config;
+/*package ru.practicum.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
@@ -15,4 +15,4 @@ public class AppConfig {
     public static PropertySourcesPlaceholderConfigurer propertyConfig() {
         return new PropertySourcesPlaceholderConfigurer();
     }
-}
+}*/
