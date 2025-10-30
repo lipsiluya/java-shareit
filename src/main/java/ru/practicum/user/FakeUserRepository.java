@@ -1,38 +1,45 @@
 package ru.practicum.user;
 
+import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Repository;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 
 @Repository
+@Primary
 public class FakeUserRepository implements UserRepository {
-    private static final List<User> FAKE_USERS = createManyFakeUsers(3);
+
+    private final Map<Long, User> storage = new HashMap<>();
+    private long idCounter = 1;
 
     @Override
     public List<User> findAll() {
-        return FAKE_USERS;
+        return new ArrayList<>(storage.values());
     }
 
     @Override
     public User save(User user) {
-        throw new UnsupportedOperationException("Метод save() ещё не готов");
-    }
-
-    private static List<User> createManyFakeUsers(int count) {
-        List<User> fakeUsers = new ArrayList<>();
-        for (long id = 1; id <= count; id++) {
-            fakeUsers.add(createFakeUser(id));
+        if (user.getId() == null) {
+            user.setId(idCounter++);
         }
-        return Collections.unmodifiableList(fakeUsers);
+        storage.put(user.getId(), user);
+        return user;
     }
 
-    private static User createFakeUser(long id) {
-        User fakeUser = new User();
-        fakeUser.setId(id);
-        fakeUser.setEmail("mail" + id + "@example.com");
-        fakeUser.setName("Akakiy Akakievich #" + id);
-        return fakeUser;
+    @Override
+    public Optional<User> findById(Long id) {
+        return Optional.ofNullable(storage.get(id));
+    }
+
+    @Override
+    public Optional<User> findByEmail(String email) {
+        return storage.values().stream()
+                .filter(u -> u.getEmail().equals(email))
+                .findFirst();
+    }
+
+    @Override
+    public void delete(Long id) {
+        storage.remove(id);
     }
 }

@@ -6,13 +6,8 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 public class HealthController {
 
-    @GetMapping("/health")
-    public String health() {
-        return "OK";
-    }
-
-    @GetMapping("/test")
+    @GetMapping("/health")  // ← изменить путь
     public String test() {
-        return "Application is working!";
+        return "OK";
     }
 }
