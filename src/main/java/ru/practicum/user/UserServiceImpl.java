@@ -29,9 +29,7 @@ public class UserServiceImpl implements UserService {
             User user = UserMapper.toUser(dto);
             User saved = repository.save(user);
             log.info("Created user successfully: {}", saved.getId());
-            UserDto result = UserMapper.toDto(saved);
-            log.info("UserDto to return: {}", result);
-            return result;
+            return UserMapper.toDto(saved);
         } catch (Exception e) {
             log.error("Error creating user", e);
             throw e;
@@ -47,45 +45,42 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public UserDto update(Long id, UserDto dto) {
-        log.info("=== USER UPDATE STARTED ===");
-        log.info("Updating user ID: {}, DTO: {}", id, dto);
+        log.info("Updating user ID: {}", id);
 
-        try {
-            if (id == null || id <= 0) {
-                throw new ValidationException("Invalid user ID");
-            }
-
-            User user = repository.findById(id)
-                    .orElseThrow(() -> new NotFoundException("User not found with id: " + id));
-
-            log.info("Found user: {}", user);
-
-            // Обновление email с проверкой уникальности
-            if (dto.getEmail() != null && !dto.getEmail().isBlank()) {
-                if (!dto.getEmail().equals(user.getEmail())) {
-                    repository.findByEmail(dto.getEmail())
-                            .ifPresent(u -> {
-                                throw new ConflictException("Email already exists");
-                            });
-                    user.setEmail(dto.getEmail());
-                    log.info("Updated email to: {}", dto.getEmail());
-                }
-            }
-
-            // Обновление имени
-            if (dto.getName() != null && !dto.getName().isBlank()) {
-                user.setName(dto.getName());
-                log.info("Updated name to: {}", dto.getName());
-            }
-
-            User updated = repository.save(user);
-            UserDto result = UserMapper.toDto(updated);
-            log.info("=== USER UPDATE SUCCESS: {} ===", result);
-            return result;
-        } catch (Exception e) {
-            log.error("=== USER UPDATE FAILED ===", e);
-            throw e;
+        if (id == null || id <= 0) {
+            throw new ValidationException("Invalid user ID");
         }
+
+        User user = repository.findById(id)
+                .orElseThrow(() -> new NotFoundException("User not found with id: " + id));
+
+        // Обновление email с проверкой уникальности
+        if (dto.getEmail() != null && !dto.getEmail().isBlank()) {
+            // Валидация email формата
+            if (!dto.getEmail().contains("@")) {
+                throw new ValidationException("Invalid email format");
+            }
+            // Проверка уникальности
+            if (!dto.getEmail().equals(user.getEmail())) {
+                repository.findByEmail(dto.getEmail())
+                        .ifPresent(u -> {
+                            throw new ConflictException("Email already exists");
+                        });
+                user.setEmail(dto.getEmail());
+            }
+        }
+
+        // Обновление имени - для PATCH пустое имя это ошибка
+        if (dto.getName() != null) {
+            if (dto.getName().isBlank()) {
+                throw new ValidationException("Name cannot be blank");
+            }
+            user.setName(dto.getName());
+        }
+
+        User updated = repository.save(user);
+        log.info("User updated successfully: {}", updated.getId());
+        return UserMapper.toDto(updated);
     }
 
     @Override

@@ -7,7 +7,7 @@ import java.util.*;
 
 @Repository
 @Primary
-public class FakeUserRepository implements UserRepository {
+public class UserRepositoryImpl implements UserRepository {
 
     private final Map<Long, User> storage = new HashMap<>();
     private long idCounter = 1;

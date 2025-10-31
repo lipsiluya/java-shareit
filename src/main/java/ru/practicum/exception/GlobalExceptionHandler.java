@@ -1,36 +1,64 @@
 package ru.practicum.exception;
 
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
 
+@Slf4j
 @ControllerAdvice
 public class GlobalExceptionHandler {
 
-    @ExceptionHandler(ru.practicum.exception.NotFoundException.class)
+    @ExceptionHandler(NotFoundException.class)
     @ResponseStatus(HttpStatus.NOT_FOUND)
     @ResponseBody
-    public String handleNotFound(ru.practicum.exception.NotFoundException e) {
-        return e.getMessage();
+    public ErrorResponse handleNotFound(NotFoundException e) {
+        log.warn("Not found: {}", e.getMessage());
+        return new ErrorResponse(e.getMessage());
     }
 
     @ExceptionHandler(ConflictException.class)
     @ResponseStatus(HttpStatus.CONFLICT)
     @ResponseBody
-    public String handleConflict(ConflictException e) {
-        return e.getMessage();
+    public ErrorResponse handleConflict(ConflictException e) {
+        log.warn("Conflict: {}", e.getMessage());
+        return new ErrorResponse(e.getMessage());
     }
 
-    @ExceptionHandler(ru.practicum.exception.ValidationException.class)
+    @ExceptionHandler(ValidationException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     @ResponseBody
-    public String handleValidation(ru.practicum.exception.ValidationException e) {
-        return e.getMessage();
+    public ErrorResponse handleValidation(ValidationException e) {
+        log.warn("Validation error: {}", e.getMessage());
+        return new ErrorResponse(e.getMessage());
+    }
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    @ResponseBody
+    public ErrorResponse handleMethodArgumentNotValid(MethodArgumentNotValidException e) {
+        String errorMessage = e.getBindingResult().getFieldErrors().stream()
+                .map(error -> error.getField() + ": " + error.getDefaultMessage())
+                .findFirst()
+                .orElse("Validation error");
+        log.warn("Validation error: {}", errorMessage);
+        return new ErrorResponse(errorMessage);
     }
 
     @ExceptionHandler(Exception.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     @ResponseBody
-    public String handleAll(Exception e) {
-        return e.getMessage();
+    public ErrorResponse handleAll(Exception e) {
+        log.error("Internal server error", e);
+        return new ErrorResponse("Internal server error");
+    }
+
+    // DTO для стандартизации ответов об ошибках
+    @Data
+    @AllArgsConstructor
+    private static class ErrorResponse {
+        private String error;
     }
 }
