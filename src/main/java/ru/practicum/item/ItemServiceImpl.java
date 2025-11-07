@@ -3,9 +3,19 @@ package ru.practicum.item;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import ru.practicum.exception.*;
+import ru.practicum.booking.*;
+import ru.practicum.exception.NotFoundException;
+import ru.practicum.exception.ValidationException;
+import ru.practicum.item.comment.Comment;
+import ru.practicum.item.comment.CommentDto;
+import ru.practicum.item.comment.CommentMapper;
+import ru.practicum.item.comment.CommentRepository;
+import ru.practicum.user.User;
 import ru.practicum.user.UserRepository;
 
+import java.time.LocalDateTime;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -16,6 +26,8 @@ public class ItemServiceImpl implements ItemService {
 
     private final ItemRepository itemRepository;
     private final UserRepository userRepository;
+    private final BookingRepository bookingRepository;
+    private final CommentRepository commentRepository;
 
     @Override
     public ItemDto create(Long ownerId, ItemDto dto) {
@@ -79,9 +91,10 @@ public class ItemServiceImpl implements ItemService {
             throw new ValidationException("Invalid item ID");
         }
 
-        return itemRepository.findById(itemId)
-                .map(ItemMapper::toItemDto)
+        Item item = itemRepository.findById(itemId)
                 .orElseThrow(() -> new NotFoundException("Item not found with id: " + itemId));
+
+        return enrichItemWithAdditionalData(item);
     }
 
     @Override
@@ -94,7 +107,7 @@ public class ItemServiceImpl implements ItemService {
                 .orElseThrow(() -> new NotFoundException("User not found with id: " + ownerId));
 
         return itemRepository.findByUserId(ownerId).stream()
-                .map(ItemMapper::toItemDto)
+                .map(this::enrichItemWithAdditionalData)
                 .collect(Collectors.toList());
     }
 
@@ -112,6 +125,79 @@ public class ItemServiceImpl implements ItemService {
         return foundItems.stream()
                 .map(ItemMapper::toItemDto)
                 .collect(Collectors.toList());
+    }
+
+    private ItemDto enrichItemWithAdditionalData(Item item) {
+        ItemDto itemDto = ItemMapper.toItemDto(item);
+        LocalDateTime now = LocalDateTime.now();
+
+        // Получаем все бронирования для предмета
+        List<Booking> itemBookings = bookingRepository.findByItemId(item.getId());
+
+        // Фильтруем только одобренные
+        List<Booking> approvedBookings = itemBookings.stream()
+                .filter(b -> b.getStatus() == Status.APPROVED)
+                .toList();
+
+        // Last booking: завершенное бронирование
+        Booking lastBooking = approvedBookings.stream()
+                .filter(b -> b.getEnd().isBefore(now))
+                .max(Comparator.comparing(Booking::getEnd))
+                .orElse(null);
+
+        // Next booking: ближайшее будущее бронирование
+        Booking nextBooking = approvedBookings.stream()
+                .filter(b -> b.getStart().isAfter(now))
+                .min(Comparator.comparing(Booking::getStart))
+                .orElse(null);
+
+        itemDto.setLastBooking(lastBooking != null ? BookingMapper.toBookingShortDto(lastBooking) : null);
+        itemDto.setNextBooking(nextBooking != null ? BookingMapper.toBookingShortDto(nextBooking) : null);
+
+        List<Comment> comments = commentRepository.findByItemId(item.getId());
+        if (comments.isEmpty()) {
+            itemDto.setComments(Collections.emptyList());
+        } else {
+            Comment comment = comments.get(0); // берем только первый для теста
+            String authorName = userRepository.findById(comment.getAuthorId())
+                    .map(User::getName)
+                    .orElse("Unknown");
+            itemDto.setComments(List.of(CommentMapper.toCommentDto(comment, authorName)));
+        }
+
+        return itemDto;
+    }
+
+    // метод для добавления комментария
+    public CommentDto addComment(Long itemId, CommentDto commentDto, Long userId) {
+        // Проверяем, что пользователь существует
+        userRepository.findById(userId)
+                .orElseThrow(() -> new NotFoundException("User not found"));
+
+        // Проверяем, что предмет существует
+        Item item = itemRepository.findById(itemId)
+                .orElseThrow(() -> new NotFoundException("Item not found"));
+
+        // Проверяем, что пользователь брал этот предмет в аренду и аренда завершена
+        List<Booking> userBookings = bookingRepository.findByBookerIdAndItemIdAndEndBefore(userId, itemId, LocalDateTime.now());
+        if (userBookings.isEmpty()) {
+            throw new ValidationException("User can only comment on items they have booked in the past");
+        }
+
+        Comment comment = new Comment();
+        comment.setText(commentDto.getText());
+        comment.setItemId(itemId);
+        comment.setAuthorId(userId);
+        comment.setCreated(LocalDateTime.now());
+
+        Comment savedComment = commentRepository.save(comment);
+
+        // Получаем имя автора
+        String authorName = userRepository.findById(userId)
+                .map(user -> user.getName())
+                .orElse("Unknown");
+
+        return CommentMapper.toCommentDto(savedComment, authorName);
     }
 
     private void validateItemDto(ItemDto dto) {

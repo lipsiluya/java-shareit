@@ -3,7 +3,10 @@ package ru.practicum.item;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
+import ru.practicum.booking.BookingShortDto;
+import ru.practicum.item.comment.CommentDto;
 
+import java.util.List;
 
 @Data
 public class ItemDto {
@@ -17,4 +20,8 @@ public class ItemDto {
 
     @NotNull(message = "Available status must be specified")
     private Boolean available;
+
+    private BookingShortDto lastBooking;
+    private BookingShortDto nextBooking;
+    private List<CommentDto> comments;
 }

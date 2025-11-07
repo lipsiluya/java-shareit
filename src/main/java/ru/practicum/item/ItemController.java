@@ -4,6 +4,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 import ru.practicum.exception.ValidationException;
+import ru.practicum.item.comment.CommentDto;
 
 import java.util.List;
 
@@ -31,7 +32,6 @@ public class ItemController {
         if (userId == null) {
             throw new ValidationException("X-Sharer-User-Id header is required");
         }
-        // Убрал @Valid - для PATCH валидация будет в сервисе
         return service.update(userId, itemId, dto);
     }
 
@@ -51,5 +51,21 @@ public class ItemController {
     @GetMapping("/search")
     public List<ItemDto> search(@RequestParam("text") String text) {
         return service.search(text);
+    }
+
+    // эндпоинт для комментариев
+    @PostMapping("/{itemId}/comment")
+    public CommentDto addComment(@RequestHeader(value = USER_HEADER, required = false) Long userId,
+                                 @PathVariable("itemId") Long itemId,
+                                 @Valid @RequestBody CommentDto commentDto) {
+        if (userId == null) {
+            throw new ValidationException("X-Sharer-User-Id header is required");
+        }
+        // Приводим ItemServiceImpl к типу, имеющему метод addComment
+        if (service instanceof ItemServiceImpl) {
+            return ((ItemServiceImpl) service).addComment(itemId, commentDto, userId);
+        } else {
+            throw new UnsupportedOperationException("ItemService implementation does not support comments");
+        }
     }
 }
