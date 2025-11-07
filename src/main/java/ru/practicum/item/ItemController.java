@@ -35,9 +35,17 @@ public class ItemController {
         return service.update(userId, itemId, dto);
     }
 
+    // теперь проверяем владельца
     @GetMapping("/{itemId}")
-    public ItemDto get(@PathVariable("itemId") Long itemId) {
-        return service.get(itemId);
+    public ItemDto get(@PathVariable("itemId") Long itemId,
+                       @RequestHeader(value = USER_HEADER, required = false) Long userId) {
+        // Используем новый метод с проверкой владельца
+        if (service instanceof ItemServiceImpl) {
+            return ((ItemServiceImpl) service).getItemForUser(itemId, userId);
+        } else {
+            // Перестраховка
+            return service.get(itemId);
+        }
     }
 
     @GetMapping
@@ -53,7 +61,6 @@ public class ItemController {
         return service.search(text);
     }
 
-    // эндпоинт для комментариев
     @PostMapping("/{itemId}/comment")
     public CommentDto addComment(@RequestHeader(value = USER_HEADER, required = false) Long userId,
                                  @PathVariable("itemId") Long itemId,
@@ -61,11 +68,6 @@ public class ItemController {
         if (userId == null) {
             throw new ValidationException("X-Sharer-User-Id header is required");
         }
-        // Приводим ItemServiceImpl к типу, имеющему метод addComment
-        if (service instanceof ItemServiceImpl) {
-            return ((ItemServiceImpl) service).addComment(itemId, commentDto, userId);
-        } else {
-            throw new UnsupportedOperationException("ItemService implementation does not support comments");
-        }
+        return ((ItemServiceImpl) service).addComment(itemId, commentDto, userId);
     }
 }
