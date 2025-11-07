@@ -1,3 +1,5 @@
+package ru.practicum;
+
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
@@ -6,6 +8,6 @@ class ShareItTests {
 
 	@Test
 	void contextLoads() {
+		// Этот тест проверяет что Spring контекст загружается
 	}
-
 }

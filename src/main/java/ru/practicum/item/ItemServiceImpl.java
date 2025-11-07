@@ -19,25 +19,23 @@ public class ItemServiceImpl implements ItemService {
 
     @Override
     public ItemDto create(Long ownerId, ItemDto dto) {
-        // Валидация ownerId
         if (ownerId == null || ownerId <= 0) {
             throw new ValidationException("Invalid owner ID");
         }
 
         validateItemDto(dto);
 
-        // Проверка существования пользователя
         userRepository.findById(ownerId)
                 .orElseThrow(() -> new NotFoundException("User not found with id: " + ownerId));
 
         Item item = ItemMapper.toItem(dto, ownerId);
         Item saved = itemRepository.save(item);
+        log.info("Item created: {}", saved.getId());
         return ItemMapper.toItemDto(saved);
     }
 
     @Override
     public ItemDto update(Long ownerId, Long itemId, ItemDto dto) {
-        // Валидация ID
         if (ownerId == null || ownerId <= 0) {
             throw new ValidationException("Invalid owner ID");
         }
@@ -45,16 +43,13 @@ public class ItemServiceImpl implements ItemService {
             throw new ValidationException("Invalid item ID");
         }
 
-        // Поиск предмета
         Item item = itemRepository.findById(itemId)
                 .orElseThrow(() -> new NotFoundException("Item not found with id: " + itemId));
 
-        // Проверка владельца
         if (!item.getUserId().equals(ownerId)) {
             throw new NotFoundException("Only owner can update item");
         }
 
-        // Частичное обновление
         if (dto.getName() != null) {
             if (dto.getName().isBlank()) {
                 throw new ValidationException("Item name cannot be empty");
@@ -74,6 +69,7 @@ public class ItemServiceImpl implements ItemService {
         }
 
         Item updated = itemRepository.save(item);
+        log.info("Item updated: {}", updated.getId());
         return ItemMapper.toItemDto(updated);
     }
 
@@ -94,7 +90,6 @@ public class ItemServiceImpl implements ItemService {
             throw new ValidationException("Invalid owner ID");
         }
 
-        // Проверка существования пользователя
         userRepository.findById(ownerId)
                 .orElseThrow(() -> new NotFoundException("User not found with id: " + ownerId));
 
@@ -105,28 +100,18 @@ public class ItemServiceImpl implements ItemService {
 
     @Override
     public List<ItemDto> search(String text) {
-        log.info("=== ITEM SEARCH STARTED ===");
-        log.info("Search text: '{}'", text);
+        log.info("Searching items with text: '{}'", text);
 
-        try {
-            if (text == null || text.isBlank()) {
-                log.info("Empty search text, returning empty list");
-                return List.of();
-            }
-
-            List<Item> foundItems = itemRepository.search(text);
-            log.info("Found {} items", foundItems.size());
-
-            List<ItemDto> result = foundItems.stream()
-                    .map(ItemMapper::toItemDto)
-                    .collect(Collectors.toList());
-
-            log.info("=== ITEM SEARCH SUCCESS ===");
-            return result;
-        } catch (Exception e) {
-            log.error("=== ITEM SEARCH FAILED ===", e);
-            throw e;
+        if (text == null || text.isBlank()) {
+            return List.of();
         }
+
+        List<Item> foundItems = itemRepository.search(text);
+        log.info("Found {} items", foundItems.size());
+
+        return foundItems.stream()
+                .map(ItemMapper::toItemDto)
+                .collect(Collectors.toList());
     }
 
     private void validateItemDto(ItemDto dto) {

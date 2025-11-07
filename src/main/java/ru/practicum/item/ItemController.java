@@ -1,5 +1,6 @@
 package ru.practicum.item;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 import ru.practicum.exception.ValidationException;
@@ -16,7 +17,7 @@ public class ItemController {
 
     @PostMapping
     public ItemDto create(@RequestHeader(value = USER_HEADER, required = false) Long userId,
-                          @RequestBody ItemDto dto) {
+                          @Valid @RequestBody ItemDto dto) {
         if (userId == null) {
             throw new ValidationException("X-Sharer-User-Id header is required");
         }
@@ -30,6 +31,7 @@ public class ItemController {
         if (userId == null) {
             throw new ValidationException("X-Sharer-User-Id header is required");
         }
+        // Убрал @Valid - для PATCH валидация будет в сервисе
         return service.update(userId, itemId, dto);
     }
 

@@ -1,10 +1,13 @@
 package ru.practicum.user;
 
+import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Repository;
+
 import java.util.*;
 
 @Repository
-public class InMemoryUserRepository implements UserRepository {
+@Primary
+public class UserRepositoryImpl implements UserRepository {
 
     private final Map<Long, User> storage = new HashMap<>();
     private long idCounter = 1;
