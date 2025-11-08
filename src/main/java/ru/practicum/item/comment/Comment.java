@@ -28,6 +28,6 @@ public class Comment {
     @Column(name = "author_id", nullable = false)
     private Long authorId;
 
-    @Column(name = "created_date", nullable = false)
+    @Column(name = "created", nullable = false)
     private LocalDateTime created;
 }

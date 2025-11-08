@@ -36,10 +36,10 @@
             <artifactId>spring-boot-starter-data-jpa</artifactId>
         </dependency>
 
-        <!-- H2 Database -->
+        <!-- PostgreSQL Driver -->
         <dependency>
-            <groupId>com.h2database</groupId>
-            <artifactId>h2</artifactId>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
             <scope>runtime</scope>
         </dependency>
 
@@ -106,7 +106,6 @@
         </plugins>
     </build>
 
-    <!-- Добавьте этот раздел с профилями -->
     <profiles>
         <profile>
             <id>check</id>
@@ -124,13 +123,10 @@
                                 </goals>
                                 <configuration>
                                     <rules>
-                                        <!-- Проверка версии Java -->
                                         <requireJavaVersion>
                                             <version>17</version>
                                         </requireJavaVersion>
-                                        <!-- Запрет дублирующихся зависимостей -->
                                         <banDuplicatePomDependencyVersions/>
-                                        <!-- Проверка сходимости зависимостей -->
                                         <dependencyConvergence/>
                                     </rules>
                                 </configuration>

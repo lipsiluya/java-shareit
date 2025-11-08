@@ -17,9 +17,9 @@ public class Item {
     @Column(name = "description", length = 1000)
     private String description;
 
-    @Column(name = "is_available", nullable = false)
+    @Column(name = "available", nullable = false)
     private Boolean available;
 
-    @Column(name = "user_id", nullable = false)
+    @Column(name = "owner_id", nullable = false)
     private Long userId;
 }

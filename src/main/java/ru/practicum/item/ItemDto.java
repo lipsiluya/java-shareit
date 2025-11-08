@@ -21,6 +21,7 @@ public class ItemDto {
     @NotNull(message = "Available status must be specified")
     private Boolean available;
 
+    private Long ownerId;
     private BookingShortDto lastBooking;
     private BookingShortDto nextBooking;
     private List<CommentDto> comments;
