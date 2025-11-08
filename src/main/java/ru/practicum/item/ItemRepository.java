@@ -1,16 +1,20 @@
 package ru.practicum.item;
 
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+
 import java.util.List;
-import java.util.Optional;
 
-public interface ItemRepository {
-    List<Item> findByUserId(long userId);
+public interface ItemRepository extends JpaRepository<Item, Long> {
+    List<Item> findByUserId(Long userId);
 
-    Optional<Item> findById(long id);
+    @Query("SELECT i FROM Item i WHERE i.available = true AND " +
+            "(LOWER(i.name) LIKE LOWER(CONCAT('%', :text, '%')) OR " +
+            "LOWER(i.description) LIKE LOWER(CONCAT('%', :text, '%')))")
+    List<Item> search(@Param("text") String text, Pageable pageable);
 
-    Item save(Item item);
-
-    void deleteByUserIdAndItemId(long userId, long itemId);
-
-    List<Item> search(String text);
+    // Для получения items по владельцу с пагинацией
+    List<Item> findByUserIdOrderById(Long userId, Pageable pageable);
 }

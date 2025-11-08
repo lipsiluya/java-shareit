@@ -1,122 +1,95 @@
 package ru.practicum.user;
 
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import ru.practicum.exception.*;
+import org.springframework.transaction.annotation.Transactional;
+import ru.practicum.exception.ConflictException;
+import ru.practicum.exception.NotFoundException;
+import ru.practicum.exception.ValidationException;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
-@Slf4j
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class UserServiceImpl implements UserService {
 
-    private final UserRepository repository;
+    private final UserRepository userRepository;
 
     @Override
-    public UserDto create(UserDto dto) {
-        log.info("Creating user with email: {}", dto.getEmail());
-        try {
-            validateCreate(dto);
+    @Transactional
+    public UserDto create(UserDto userDto) {
+        validateUser(userDto);
 
-            repository.findByEmail(dto.getEmail())
-                    .ifPresent(u -> {
-                        throw new ConflictException("Email already exists");
-                    });
-
-            User user = UserMapper.toUser(dto);
-            User saved = repository.save(user);
-            log.info("Created user successfully: {}", saved.getId());
-            return UserMapper.toDto(saved);
-        } catch (Exception e) {
-            log.error("Error creating user", e);
-            throw e;
+        // Проверка уникальности email
+        if (userRepository.findByEmail(userDto.getEmail()).isPresent()) {
+            throw new ConflictException("User with email " + userDto.getEmail() + " already exists");
         }
+
+        User user = UserMapper.toUser(userDto);
+        User savedUser = userRepository.save(user);
+        return UserMapper.toDto(savedUser);
+    }
+
+    @Override
+    @Transactional
+    public UserDto update(Long userId, UserDto userDto) {
+        User existingUser = userRepository.findById(userId)
+                .orElseThrow(() -> new NotFoundException("User with id " + userId + " not found"));
+
+        // Обновляем поля, если они предоставлены
+        if (userDto.getName() != null && !userDto.getName().isBlank()) {
+            existingUser.setName(userDto.getName());
+        }
+
+        if (userDto.getEmail() != null && !userDto.getEmail().isBlank()) {
+            // Проверяем, что email не занят другим пользователем
+            userRepository.findByEmail(userDto.getEmail())
+                    .ifPresent(user -> {
+                        if (!user.getId().equals(userId)) {
+                            throw new ConflictException("Email " + userDto.getEmail() + " is already taken");
+                        }
+                    });
+            existingUser.setEmail(userDto.getEmail());
+        }
+
+        User updatedUser = userRepository.save(existingUser);
+        return UserMapper.toDto(updatedUser);
+    }
+
+    @Override
+    @Transactional
+    public void delete(Long userId) {
+        if (!userRepository.existsById(userId)) {
+            throw new NotFoundException("User with id " + userId + " not found");
+        }
+        userRepository.deleteById(userId);
+    }
+
+    @Override
+    public UserDto getById(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new NotFoundException("User with id " + userId + " not found"));
+        return UserMapper.toDto(user);
     }
 
     @Override
     public List<UserDto> getAll() {
-        return repository.findAll().stream()
+        return userRepository.findAll().stream()
                 .map(UserMapper::toDto)
                 .collect(Collectors.toList());
     }
 
-    @Override
-    public UserDto update(Long id, UserDto dto) {
-        log.info("Updating user ID: {}", id);
-
-        if (id == null || id <= 0) {
-            throw new ValidationException("Invalid user ID");
+    private void validateUser(UserDto userDto) {
+        if (userDto.getEmail() == null || userDto.getEmail().isBlank()) {
+            throw new ValidationException("Email cannot be blank");
         }
-
-        User user = repository.findById(id)
-                .orElseThrow(() -> new NotFoundException("User not found with id: " + id));
-
-        // Обновление email с проверкой уникальности
-        if (dto.getEmail() != null && !dto.getEmail().isBlank()) {
-            // Валидация email формата
-            if (!dto.getEmail().contains("@")) {
-                throw new ValidationException("Invalid email format");
-            }
-            // Проверка уникальности
-            if (!dto.getEmail().equals(user.getEmail())) {
-                repository.findByEmail(dto.getEmail())
-                        .ifPresent(u -> {
-                            throw new ConflictException("Email already exists");
-                        });
-                user.setEmail(dto.getEmail());
-            }
+        if (!userDto.getEmail().contains("@")) {
+            throw new ValidationException("Email must contain @");
         }
-
-        // Обновление имени - для PATCH пустое имя это ошибка
-        if (dto.getName() != null) {
-            if (dto.getName().isBlank()) {
-                throw new ValidationException("Name cannot be blank");
-            }
-            user.setName(dto.getName());
-        }
-
-        User updated = repository.save(user);
-        log.info("User updated successfully: {}", updated.getId());
-        return UserMapper.toDto(updated);
-    }
-
-    @Override
-    public UserDto get(Long id) {
-        if (id == null || id <= 0) {
-            throw new ValidationException("Invalid user ID");
-        }
-
-        return repository.findById(id)
-                .map(UserMapper::toDto)
-                .orElseThrow(() -> new NotFoundException("User not found with id: " + id));
-    }
-
-    @Override
-    public void delete(Long id) {
-        if (id == null || id <= 0) {
-            throw new ValidationException("Invalid user ID");
-        }
-
-        if (repository.findById(id).isEmpty()) {
-            throw new NotFoundException("User not found with id: " + id);
-        }
-
-        repository.delete(id);
-        log.info("User deleted: {}", id);
-    }
-
-    private void validateCreate(UserDto dto) {
-        if (dto.getEmail() == null || dto.getEmail().isBlank()) {
-            throw new ValidationException("Email is required");
-        }
-        if (!dto.getEmail().contains("@")) {
-            throw new ValidationException("Invalid email format");
-        }
-        if (dto.getName() == null || dto.getName().isBlank()) {
-            throw new ValidationException("Name is required");
+        if (userDto.getName() == null || userDto.getName().isBlank()) {
+            throw new ValidationException("Name cannot be blank");
         }
     }
 }
