@@ -1,19 +1,17 @@
 package ru.practicum.item.comment;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.time.LocalDateTime;
 
-@Data
 @Entity
-@Builder
+@Table(name = "comments")
+@Getter
+@Setter
+@ToString
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "comments")
 public class Comment {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

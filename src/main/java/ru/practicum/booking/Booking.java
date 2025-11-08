@@ -1,19 +1,18 @@
 package ru.practicum.booking;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.time.LocalDateTime;
 
-@Data
 @Entity
-@Builder
+@Table(name = "bookings")
+@Getter
+@Setter
+@ToString
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "bookings")
+@Builder
 public class Booking {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

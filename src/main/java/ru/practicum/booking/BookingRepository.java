@@ -19,6 +19,8 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
 
     List<Booking> findByItemIdInAndStatus(List<Long> itemIds, Status status, Pageable pageable);
 
+    List<Booking> findByItemIdIn(List<Long> itemIds);
+
     // Для booker с фильтрами по времени
     @Query("SELECT b FROM Booking b WHERE b.bookerId = :bookerId AND b.start < :now AND b.end > :now")
     List<Booking> findCurrentBookingsByBooker(@Param("bookerId") Long bookerId, @Param("now") LocalDateTime now, Pageable pageable);

@@ -20,7 +20,7 @@ import ru.practicum.user.User;
 import ru.practicum.user.UserRepository;
 
 import java.time.LocalDateTime;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -111,11 +111,10 @@ public class ItemServiceImpl implements ItemService {
         userRepository.findById(ownerId)
                 .orElseThrow(() -> new NotFoundException("User not found with id: " + ownerId));
 
-        // Используем пагинацию для получения items владельца
         Pageable pageable = PageRequest.of(0, 20);
-        return itemRepository.findByUserIdOrderById(ownerId, pageable).stream()
-                .map(this::enrichItemWithFullData)
-                .collect(Collectors.toList());
+        List<Item> items = itemRepository.findByUserIdOrderById(ownerId, pageable);
+
+        return enrichItemsWithFullData(items);
     }
 
     @Override
@@ -148,7 +147,6 @@ public class ItemServiceImpl implements ItemService {
             throw new ValidationException("User can only comment on items they have booked in the past");
         }
 
-        // Используем обычное создание вместо билдера
         Comment comment = new Comment();
         comment.setText(commentDto.getText());
         comment.setItemId(itemId);
@@ -165,61 +163,140 @@ public class ItemServiceImpl implements ItemService {
     }
 
     private ItemDto enrichItemWithBasicData(Item item) {
-        ItemDto itemDto = ItemMapper.toItemDto(item);
-
-        List<Comment> comments = commentRepository.findByItemId(item.getId());
-        itemDto.setComments(comments.stream()
-                .map(comment -> {
-                    String authorName = userRepository.findById(comment.getAuthorId())
-                            .map(User::getName)
-                            .orElse("Unknown");
-                    return CommentMapper.toCommentDto(comment, authorName);
-                })
-                .collect(Collectors.toList()));
-
-        itemDto.setLastBooking(null);
-        itemDto.setNextBooking(null);
-
-        return itemDto;
+        List<Item> singleItemList = Collections.singletonList(item);
+        List<ItemDto> enrichedItems = enrichItemsWithBasicData(singleItemList);
+        return enrichedItems.get(0);
     }
 
     private ItemDto enrichItemWithFullData(Item item) {
-        ItemDto itemDto = ItemMapper.toItemDto(item);
+        List<Item> singleItemList = Collections.singletonList(item);
+        List<ItemDto> enrichedItems = enrichItemsWithFullData(singleItemList);
+        return enrichedItems.get(0);
+    }
+
+    private List<ItemDto> enrichItemsWithBasicData(List<Item> items) {
+        if (items.isEmpty()) {
+            return List.of();
+        }
+
+        List<Long> itemIds = items.stream()
+                .map(Item::getId)
+                .collect(Collectors.toList());
+
+        // Загружаем все комментарии для всех items одним запросом
+        List<Comment> allComments = commentRepository.findByItemIdIn(itemIds);
+
+        // Загружаем всех авторов комментариев одним запросом
+        Set<Long> authorIds = allComments.stream()
+                .map(Comment::getAuthorId)
+                .collect(Collectors.toSet());
+
+        Map<Long, User> authors = userRepository.findAllById(authorIds).stream()
+                .collect(Collectors.toMap(User::getId, user -> user));
+
+        // Группируем комментарии по itemId
+        Map<Long, List<Comment>> commentsByItemId = allComments.stream()
+                .collect(Collectors.groupingBy(Comment::getItemId));
+
+        return items.stream()
+                .map(item -> {
+                    ItemDto itemDto = ItemMapper.toItemDto(item);
+
+                    // Добавляем комментарии
+                    List<Comment> itemComments = commentsByItemId.getOrDefault(item.getId(), List.of());
+                    List<CommentDto> commentDtos = itemComments.stream()
+                            .map(comment -> {
+                                String authorName = authors.containsKey(comment.getAuthorId())
+                                        ? authors.get(comment.getAuthorId()).getName()
+                                        : "Unknown";
+                                return CommentMapper.toCommentDto(comment, authorName);
+                            })
+                            .collect(Collectors.toList());
+                    itemDto.setComments(commentDtos);
+
+                    itemDto.setLastBooking(null);
+                    itemDto.setNextBooking(null);
+
+                    return itemDto;
+                })
+                .collect(Collectors.toList());
+    }
+
+    private List<ItemDto> enrichItemsWithFullData(List<Item> items) {
+        if (items.isEmpty()) {
+            return List.of();
+        }
+
+        List<Long> itemIds = items.stream()
+                .map(Item::getId)
+                .collect(Collectors.toList());
+
         LocalDateTime now = LocalDateTime.now();
 
-        List<Booking> itemBookings = bookingRepository.findByItemId(item.getId());
+        // Загружаем все бронирования для всех items одним запросом
+        List<Booking> allBookings = bookingRepository.findByItemIdIn(itemIds);
 
-        Booking lastBooking = itemBookings.stream()
-                .filter(booking -> booking.getStatus() == Status.APPROVED)
-                .filter(booking -> booking.getEnd().isBefore(now))
-                .max((b1, b2) -> b2.getEnd().compareTo(b1.getEnd()))
-                .orElse(null);
+        // Загружаем все комментарии для всех items одним запросом
+        List<Comment> allComments = commentRepository.findByItemIdIn(itemIds);
 
-        itemDto.setLastBooking(lastBooking != null ?
-                new BookingShortDto(lastBooking.getId(), lastBooking.getBookerId(), lastBooking.getStart(), lastBooking.getEnd()) :
-                null);
+        // Загружаем всех авторов комментариев одним запросом
+        Set<Long> authorIds = allComments.stream()
+                .map(Comment::getAuthorId)
+                .collect(Collectors.toSet());
 
-        Booking nextBooking = itemBookings.stream()
-                .filter(booking -> booking.getStatus() == Status.APPROVED)
-                .filter(booking -> booking.getStart().isAfter(now))
-                .min((b1, b2) -> b1.getStart().compareTo(b2.getStart()))
-                .orElse(null);
+        Map<Long, User> authors = userRepository.findAllById(authorIds).stream()
+                .collect(Collectors.toMap(User::getId, user -> user));
 
-        itemDto.setNextBooking(nextBooking != null ?
-                new BookingShortDto(nextBooking.getId(), nextBooking.getBookerId(), nextBooking.getStart(), nextBooking.getEnd()) :
-                null);
+        // Группируем бронирования по itemId
+        Map<Long, List<Booking>> bookingsByItemId = allBookings.stream()
+                .collect(Collectors.groupingBy(Booking::getItemId));
 
-        List<Comment> comments = commentRepository.findByItemId(item.getId());
-        itemDto.setComments(comments.stream()
-                .map(comment -> {
-                    String authorName = userRepository.findById(comment.getAuthorId())
-                            .map(User::getName)
-                            .orElse("Unknown");
-                    return CommentMapper.toCommentDto(comment, authorName);
+        // Группируем комментарии по itemId
+        Map<Long, List<Comment>> commentsByItemId = allComments.stream()
+                .collect(Collectors.groupingBy(Comment::getItemId));
+
+        return items.stream()
+                .map(item -> {
+                    ItemDto itemDto = ItemMapper.toItemDto(item);
+
+                    // Обрабатываем бронирования
+                    List<Booking> itemBookings = bookingsByItemId.getOrDefault(item.getId(), List.of());
+
+                    Booking lastBooking = itemBookings.stream()
+                            .filter(booking -> booking.getStatus() == Status.APPROVED)
+                            .filter(booking -> booking.getEnd().isBefore(now))
+                            .max((b1, b2) -> b2.getEnd().compareTo(b1.getEnd()))
+                            .orElse(null);
+
+                    itemDto.setLastBooking(lastBooking != null ?
+                            new BookingShortDto(lastBooking.getId(), lastBooking.getBookerId(), lastBooking.getStart(), lastBooking.getEnd()) :
+                            null);
+
+                    Booking nextBooking = itemBookings.stream()
+                            .filter(booking -> booking.getStatus() == Status.APPROVED)
+                            .filter(booking -> booking.getStart().isAfter(now))
+                            .min((b1, b2) -> b1.getStart().compareTo(b2.getStart()))
+                            .orElse(null);
+
+                    itemDto.setNextBooking(nextBooking != null ?
+                            new BookingShortDto(nextBooking.getId(), nextBooking.getBookerId(), nextBooking.getStart(), nextBooking.getEnd()) :
+                            null);
+
+                    // Добавляем комментарии
+                    List<Comment> itemComments = commentsByItemId.getOrDefault(item.getId(), List.of());
+                    List<CommentDto> commentDtos = itemComments.stream()
+                            .map(comment -> {
+                                String authorName = authors.containsKey(comment.getAuthorId())
+                                        ? authors.get(comment.getAuthorId()).getName()
+                                        : "Unknown";
+                                return CommentMapper.toCommentDto(comment, authorName);
+                            })
+                            .collect(Collectors.toList());
+                    itemDto.setComments(commentDtos);
+
+                    return itemDto;
                 })
-                .collect(Collectors.toList()));
-
-        return itemDto;
+                .collect(Collectors.toList());
     }
 
     private void updateItemFields(Item item, ItemDto dto) {

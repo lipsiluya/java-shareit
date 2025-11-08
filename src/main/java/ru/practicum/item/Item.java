@@ -1,11 +1,15 @@
 package ru.practicum.item;
 
 import jakarta.persistence.*;
-import lombok.Data;
+import lombok.*;
 
-@Data
 @Entity
 @Table(name = "items")
+@Getter
+@Setter
+@ToString
+@NoArgsConstructor
+@AllArgsConstructor
 public class Item {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
