@@ -4,7 +4,6 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
 
 @Slf4j
@@ -27,14 +26,6 @@ public class GlobalExceptionHandler {
         return new ErrorResponse(e.getMessage());
     }
 
-    @ExceptionHandler(ValidationException.class)
-    @ResponseStatus(HttpStatus.BAD_REQUEST)
-    @ResponseBody
-    public ErrorResponse handleValidation(ValidationException e) {
-        log.warn("Validation error: {}", e.getMessage());
-        return new ErrorResponse(e.getMessage());
-    }
-
     @ExceptionHandler(ForbiddenException.class)
     @ResponseStatus(HttpStatus.FORBIDDEN)
     @ResponseBody
@@ -43,17 +34,8 @@ public class GlobalExceptionHandler {
         return new ErrorResponse(e.getMessage());
     }
 
-    @ExceptionHandler(MethodArgumentNotValidException.class)
-    @ResponseStatus(HttpStatus.BAD_REQUEST)
-    @ResponseBody
-    public ErrorResponse handleMethodArgumentNotValid(MethodArgumentNotValidException e) {
-        String errorMessage = e.getBindingResult().getFieldErrors().stream()
-                .map(error -> error.getField() + ": " + error.getDefaultMessage())
-                .findFirst()
-                .orElse("Validation error");
-        log.warn("Validation error: {}", errorMessage);
-        return new ErrorResponse(errorMessage);
-    }
+    // удалил обработчики валидации - они должны быть только на gateway
+
 
     @ExceptionHandler(Exception.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)

@@ -1,6 +1,5 @@
 package ru.practicum.user;
 
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -14,7 +13,7 @@ public class UserController {
     private final UserService service;
 
     @PostMapping
-    public UserDto create(@Valid @RequestBody UserDto dto) {
+    public UserDto create(@RequestBody UserDto dto) { // Убрал @Valid
         return service.create(dto);
     }
 

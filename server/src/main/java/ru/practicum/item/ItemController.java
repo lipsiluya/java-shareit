@@ -1,6 +1,5 @@
 package ru.practicum.item;
 
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 import ru.practicum.exception.ValidationException;
@@ -18,7 +17,7 @@ public class ItemController {
 
     @PostMapping
     public ItemDto create(@RequestHeader(value = USER_HEADER, required = false) Long userId,
-                          @Valid @RequestBody ItemDto dto) {
+                          @RequestBody ItemDto dto) { // Убрал @Valid
         if (userId == null) {
             throw new ValidationException("X-Sharer-User-Id header is required");
         }
@@ -28,7 +27,7 @@ public class ItemController {
     @PatchMapping("/{itemId}")
     public ItemDto update(@RequestHeader(value = USER_HEADER, required = false) Long userId,
                           @PathVariable("itemId") Long itemId,
-                          @Valid @RequestBody ItemDto dto) {
+                          @RequestBody ItemDto dto) { // Убрал @Valid
         if (userId == null) {
             throw new ValidationException("X-Sharer-User-Id header is required");
         }
@@ -38,7 +37,6 @@ public class ItemController {
     @GetMapping("/{itemId}")
     public ItemDto get(@PathVariable("itemId") Long itemId,
                        @RequestHeader(value = USER_HEADER, required = false) Long userId) {
-        // Просто вызываем метод сервиса
         return service.getItemForUser(itemId, userId);
     }
 
@@ -58,7 +56,7 @@ public class ItemController {
     @PostMapping("/{itemId}/comment")
     public CommentDto addComment(@RequestHeader(value = USER_HEADER, required = false) Long userId,
                                  @PathVariable("itemId") Long itemId,
-                                 @Valid @RequestBody CommentDto commentDto) { // Добавить @Valid
+                                 @RequestBody CommentDto commentDto) { // Убрал @Valid
         if (userId == null) {
             throw new ValidationException("X-Sharer-User-Id header is required");
         }

@@ -5,7 +5,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.practicum.exception.ConflictException;
 import ru.practicum.exception.NotFoundException;
-import ru.practicum.exception.ValidationException;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -20,9 +19,6 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public UserDto create(UserDto userDto) {
-        validateUser(userDto);
-
-        // Проверка уникальности email
         if (userRepository.findByEmail(userDto.getEmail()).isPresent()) {
             throw new ConflictException("User with email " + userDto.getEmail() + " already exists");
         }
@@ -44,7 +40,7 @@ public class UserServiceImpl implements UserService {
         }
 
         if (userDto.getEmail() != null && !userDto.getEmail().isBlank()) {
-            // Проверяем, что email не занят другим пользователем
+            // Бизнес-валидация: проверка, что email не занят другим пользователем
             userRepository.findByEmail(userDto.getEmail())
                     .ifPresent(user -> {
                         if (!user.getId().equals(userId)) {
@@ -79,17 +75,5 @@ public class UserServiceImpl implements UserService {
         return userRepository.findAll().stream()
                 .map(UserMapper::toDto)
                 .collect(Collectors.toList());
-    }
-
-    private void validateUser(UserDto userDto) {
-        if (userDto.getEmail() == null || userDto.getEmail().isBlank()) {
-            throw new ValidationException("Email cannot be blank");
-        }
-        if (!userDto.getEmail().contains("@")) {
-            throw new ValidationException("Email must contain @");
-        }
-        if (userDto.getName() == null || userDto.getName().isBlank()) {
-            throw new ValidationException("Name cannot be blank");
-        }
     }
 }

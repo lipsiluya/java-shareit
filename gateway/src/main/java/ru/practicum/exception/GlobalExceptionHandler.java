@@ -44,14 +44,15 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(HttpServerErrorException.class)
     public ResponseEntity<Object> handleHttpServerError(HttpServerErrorException e) {
         log.warn("HTTP Server error: {} - {}", e.getStatusCode(), e.getStatusText());
+        // Пробрасываем 500 ошибки от server как есть
         return ResponseEntity.status(e.getStatusCode()).body(e.getResponseBodyAsString());
     }
 
     @ExceptionHandler(Exception.class)
-    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    @ResponseStatus(HttpStatus.BAD_REQUEST) // Заменил INTERNAL_SERVER_ERROR на BAD_REQUEST
     public ErrorResponse handleAll(Exception e) {
-        log.error("Internal server error", e);
-        return new ErrorResponse("Internal server error");
+        log.warn("Request processing error: {}", e.getMessage());
+        return new ErrorResponse("Request processing error: " + e.getMessage());
     }
 
     @Data

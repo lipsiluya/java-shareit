@@ -1,6 +1,5 @@
 package ru.practicum.item;
 
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 import ru.practicum.exception.ValidationException;
@@ -18,7 +17,7 @@ public class ItemRequestController {
     @PostMapping
     public ItemRequestDto create(
             @RequestHeader(value = USER_HEADER, required = false) Long userId,
-            @Valid @RequestBody ItemRequestCreateDto itemRequestCreateDto) {
+            @RequestBody ItemRequestCreateDto itemRequestCreateDto) { // Убрал @Valid
         if (userId == null) {
             throw new ValidationException("X-Sharer-User-Id header is required");
         }
