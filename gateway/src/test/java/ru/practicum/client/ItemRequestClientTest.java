@@ -11,6 +11,8 @@ import org.springframework.http.*;
 import org.springframework.web.client.RestTemplate;
 import ru.practicum.item.ItemRequestCreateDto;
 
+import java.util.Map;
+
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.verify;
@@ -26,6 +28,9 @@ class ItemRequestClientTest {
 
     @Captor
     private ArgumentCaptor<HttpEntity<String>> httpEntityCaptor;
+
+    @Captor
+    private ArgumentCaptor<Map<String, Object>> parametersCaptor;
 
     @BeforeEach
     void setUp() {
@@ -74,16 +79,17 @@ class ItemRequestClientTest {
     @Test
     void getOtherUsersRequests_WithPagination_ShouldCallGetWithCorrectUrl() {
         ResponseEntity<Object> response = new ResponseEntity<>("Success", HttpStatus.OK);
-        when(restTemplate.exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(Object.class)))
+        when(restTemplate.exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(Object.class), any(Map.class)))
                 .thenReturn(response);
 
         itemRequestClient.getOtherUsersRequests(1L, 0, 10);
 
         verify(restTemplate).exchange(
-                eq("http://localhost:9090/requests/all?from=0&size=10"),
+                eq("http://localhost:9090/requests/all"),
                 eq(HttpMethod.GET),
                 httpEntityCaptor.capture(),
-                eq(Object.class)
+                eq(Object.class),
+                parametersCaptor.capture()
         );
     }
 

@@ -11,6 +11,9 @@ import org.springframework.http.*;
 import org.springframework.web.client.RestTemplate;
 import ru.practicum.booking.State;
 
+import java.util.Map;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -26,6 +29,9 @@ class BookingClientTest {
     @Captor
     private ArgumentCaptor<HttpEntity<String>> httpEntityCaptor;
 
+    @Captor
+    private ArgumentCaptor<Map<String, Object>> parametersCaptor;
+
     @BeforeEach
     void setUp() {
         bookingClient = new BookingClient("http://localhost:9090", restTemplate);
@@ -34,50 +40,61 @@ class BookingClientTest {
     @Test
     void getBooking_ShouldCallGetWithCorrectUrl() {
         ResponseEntity<Object> response = new ResponseEntity<>("Success", HttpStatus.OK);
-        when(restTemplate.exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(Object.class), anyLong()))
+        when(restTemplate.exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(Object.class)))
                 .thenReturn(response);
 
         bookingClient.getBooking(1L, 2L);
 
         verify(restTemplate).exchange(
-                eq("http://localhost:9090/bookings/{bookingId}"),
+                eq("http://localhost:9090/bookings/2"),
                 eq(HttpMethod.GET),
                 httpEntityCaptor.capture(),
-                eq(Object.class),
-                eq(2L)
+                eq(Object.class)
         );
     }
 
     @Test
     void getUserBookings_WithStateAndPagination_ShouldCallGet() {
         ResponseEntity<Object> response = new ResponseEntity<>("Success", HttpStatus.OK);
-        when(restTemplate.exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(Object.class)))
+        when(restTemplate.exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(Object.class), any(Map.class)))
                 .thenReturn(response);
 
         bookingClient.getUserBookings(1L, State.ALL, 0, 10);
 
         verify(restTemplate).exchange(
-                anyString(),
+                eq("http://localhost:9090/bookings"),
                 eq(HttpMethod.GET),
-                any(HttpEntity.class),
-                eq(Object.class)
+                httpEntityCaptor.capture(),
+                eq(Object.class),
+                parametersCaptor.capture()
         );
+
+        Map<String, Object> capturedParams = parametersCaptor.getValue();
+        assertEquals("ALL", capturedParams.get("state"));
+        assertEquals(0, capturedParams.get("from"));
+        assertEquals(10, capturedParams.get("size"));
     }
 
     @Test
     void getOwnerBookings_WithStateAndPagination_ShouldCallGet() {
         ResponseEntity<Object> response = new ResponseEntity<>("Success", HttpStatus.OK);
-        when(restTemplate.exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(Object.class)))
+        when(restTemplate.exchange(anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(Object.class), any(Map.class)))
                 .thenReturn(response);
 
         bookingClient.getOwnerBookings(1L, State.CURRENT, 5, 20);
 
         verify(restTemplate).exchange(
-                anyString(),
+                eq("http://localhost:9090/bookings/owner"),
                 eq(HttpMethod.GET),
-                any(HttpEntity.class),
-                eq(Object.class)
+                httpEntityCaptor.capture(),
+                eq(Object.class),
+                parametersCaptor.capture()
         );
+
+        Map<String, Object> capturedParams = parametersCaptor.getValue();
+        assertEquals("CURRENT", capturedParams.get("state"));
+        assertEquals(5, capturedParams.get("from"));
+        assertEquals(20, capturedParams.get("size"));
     }
 
     @Test
@@ -89,9 +106,9 @@ class BookingClientTest {
         bookingClient.getUserBookings(1L, null, null, null);
 
         verify(restTemplate).exchange(
-                anyString(),
+                eq("http://localhost:9090/bookings"),
                 eq(HttpMethod.GET),
-                any(HttpEntity.class),
+                httpEntityCaptor.capture(),
                 eq(Object.class)
         );
     }

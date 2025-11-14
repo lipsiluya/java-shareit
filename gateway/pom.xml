@@ -11,7 +11,7 @@
         <version>1.0-SNAPSHOT</version>
     </parent>
 
-    <artifactId>shareit-gateway</artifactId>
+    <artifactId>gateway</artifactId>
     <version>1.0-SNAPSHOT</version>
 
     <dependencies>
@@ -29,11 +29,7 @@
         </dependency>
 
         <!-- Зависимость на server для общих DTO -->
-        <dependency>
-            <groupId>ru.practicum</groupId>
-            <artifactId>shareit-server</artifactId>
-            <version>1.0-SNAPSHOT</version>
-        </dependency>
+
 
         <dependency>
             <groupId>com.h2database</groupId>
