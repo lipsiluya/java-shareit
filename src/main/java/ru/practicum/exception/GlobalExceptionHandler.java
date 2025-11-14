@@ -35,6 +35,14 @@ public class GlobalExceptionHandler {
         return new ErrorResponse(e.getMessage());
     }
 
+    @ExceptionHandler(ForbiddenException.class)
+    @ResponseStatus(HttpStatus.FORBIDDEN)
+    @ResponseBody
+    public ErrorResponse handleForbidden(ForbiddenException e) {
+        log.warn("Forbidden: {}", e.getMessage());
+        return new ErrorResponse(e.getMessage());
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     @ResponseBody
@@ -55,7 +63,6 @@ public class GlobalExceptionHandler {
         return new ErrorResponse("Internal server error");
     }
 
-    // DTO для стандартизации ответов об ошибках
     @Data
     @AllArgsConstructor
     private static class ErrorResponse {

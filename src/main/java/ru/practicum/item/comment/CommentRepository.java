@@ -1,0 +1,13 @@
+package ru.practicum.item.comment;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import java.util.List;
+
+public interface CommentRepository extends JpaRepository<Comment, Long> {
+    List<Comment> findByItemId(Long itemId);
+
+    List<Comment> findByAuthorId(Long authorId);
+
+    List<Comment> findByItemIdIn(List<Long> itemIds);
+}

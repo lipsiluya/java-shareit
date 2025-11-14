@@ -4,6 +4,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 import ru.practicum.exception.ValidationException;
+import ru.practicum.item.comment.CommentDto;
 
 import java.util.List;
 
@@ -31,13 +32,20 @@ public class ItemController {
         if (userId == null) {
             throw new ValidationException("X-Sharer-User-Id header is required");
         }
-        // Убрал @Valid - для PATCH валидация будет в сервисе
         return service.update(userId, itemId, dto);
     }
 
+    // теперь проверяем владельца
     @GetMapping("/{itemId}")
-    public ItemDto get(@PathVariable("itemId") Long itemId) {
-        return service.get(itemId);
+    public ItemDto get(@PathVariable("itemId") Long itemId,
+                       @RequestHeader(value = USER_HEADER, required = false) Long userId) {
+        // Используем новый метод с проверкой владельца
+        if (service instanceof ItemServiceImpl) {
+            return ((ItemServiceImpl) service).getItemForUser(itemId, userId);
+        } else {
+            // Перестраховка
+            return service.get(itemId);
+        }
     }
 
     @GetMapping
@@ -51,5 +59,15 @@ public class ItemController {
     @GetMapping("/search")
     public List<ItemDto> search(@RequestParam("text") String text) {
         return service.search(text);
+    }
+
+    @PostMapping("/{itemId}/comment")
+    public CommentDto addComment(@RequestHeader(value = USER_HEADER, required = false) Long userId,
+                                 @PathVariable("itemId") Long itemId,
+                                 @Valid @RequestBody CommentDto commentDto) {
+        if (userId == null) {
+            throw new ValidationException("X-Sharer-User-Id header is required");
+        }
+        return ((ItemServiceImpl) service).addComment(itemId, commentDto, userId);
     }
 }

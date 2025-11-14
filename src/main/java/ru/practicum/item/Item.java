@@ -1,12 +1,29 @@
 package ru.practicum.item;
 
-import lombok.Data;
+import jakarta.persistence.*;
+import lombok.*;
 
-@Data
+@Entity
+@Table(name = "items")
+@Getter
+@Setter
+@ToString
+@NoArgsConstructor
+@AllArgsConstructor
 public class Item {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Column(name = "name", nullable = false, length = 255)
     private String name;
+
+    @Column(name = "description", length = 1000)
     private String description;
+
+    @Column(name = "available", nullable = false)
     private Boolean available;
+
+    @Column(name = "owner_id", nullable = false)
     private Long userId;
 }
